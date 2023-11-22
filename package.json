@@ -7,7 +7,7 @@
     "build": "rimraf ./dist && tsc",
     "lint": "eslint ./**/*.ts",
     "dev": "nodemon index.ts",
-    "start": "ts-node index.ts",
+    "start": "node ./dist/index.js",
     "prepare": "husky install"
   },
   "keywords": [],
