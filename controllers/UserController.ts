@@ -3,11 +3,19 @@ import * as bcrypt from "bcryptjs";
 import * as jwt from "jsonwebtoken";
 import * as _ from "lodash";
 import { v4 as uuidv4 } from "uuid";
-import { PutCommand, PutCommandInput, QueryCommand, QueryCommandInput } from "@aws-sdk/lib-dynamodb";
-import { CognitoIdentityProvider, SignUpCommand, SignUpCommandInput } from "@aws-sdk/client-cognito-identity-provider";
+import { PutCommand, PutCommandInput, QueryCommand, QueryCommandInput, UpdateCommand, UpdateCommandInput } from "@aws-sdk/lib-dynamodb";
+import {
+  CognitoIdentityProvider,
+  ConfirmSignUpCommand,
+  ConfirmSignUpCommandInput,
+  SignUpCommand,
+  SignUpCommandInput
+} from "@aws-sdk/client-cognito-identity-provider";
 
 import { LoginUserInput, LoginUserSchema, RegisterUserInput, RegisterUserSchema } from "../validations/user.schema";
 import { ddbDocClient } from "../config/ddbDocClient";
+import { DynamoDBErrorType } from "../utils/types";
+import { DDBErrorType } from "../utils/enums";
 
 export default class UserController {
   /**
@@ -37,6 +45,7 @@ export default class UserController {
         _id: uuidv4(),
         ...filteredInput,
         password: hashedPassword,
+        email_verified: false,
         createdAt: Date.now()
       }
     };
@@ -53,8 +62,7 @@ export default class UserController {
           // Create a new user if it doesn't exist
           const data = await ddbDocClient.send(new PutCommand(putParams));
 
-
-          const cognitoClient = new CognitoIdentityProvider();
+          const cognitoClient = new CognitoIdentityProvider({ region: process.env.REGION });
           const signupParams: SignUpCommandInput = {
             ClientId: process.env.COGNITO_CLIENT_ID,
             Username: filteredInput.email,
@@ -62,7 +70,7 @@ export default class UserController {
             UserAttributes: [
               { Name: "name", Value: `${filteredInput.firstName} ${filteredInput.middleName} ${filteredInput.lastName}` },
               { Name: "address", Value: `${filteredInput.address1} ${filteredInput.address2} ${filteredInput.city} ${filteredInput.state}` }
-            ]
+            ],
           };
 
           await cognitoClient.send(new SignUpCommand(signupParams))
@@ -74,11 +82,10 @@ export default class UserController {
               });
             })
             .catch(error => {
-              console.log(error);
-
               // Return error response from the server
               res.status(500).json({
                 success: false,
+                type: "user-registration",
                 message: "Internal Server Error",
                 error
               });
@@ -86,11 +93,10 @@ export default class UserController {
         }
       })
       .catch(error => {
-        console.log(error);
-
         // Return error response from the server
         res.status(500).json({
           success: false,
+          type: "find-user",
           message: "Internal Server Error",
           error
         });
@@ -128,8 +134,18 @@ export default class UserController {
           });
         } else {
           bcrypt.compare(parsedData.password, user.password)
-            .then((isMatch: boolean) => {
+            .then(async (isMatch: boolean) => {
               if (isMatch) {
+                console.log(user.email_verified);
+
+                if (!user.email_verified) {
+                  const cognitoClient = new CognitoIdentityProvider({ region: process.env.REGION });
+                  cognitoClient.resendConfirmationCode({
+                    ClientId: process.env.COGNITO_CLIENT_ID,
+                    Username: user.email
+                  });
+                }
+
                 const payload = {
                   _id: user._id,
                   email: user.email
@@ -141,13 +157,11 @@ export default class UserController {
                     message: "Welcome back!",
                     token
                   });
-
-
                 });
               } else {
                 res.status(401).json({
                   success: false,
-                  message: "Password is incorrect"
+                  message: "Password is incorrect."
                 });
               }
             });
@@ -163,10 +177,123 @@ export default class UserController {
       // Return error response from the server
       res.status(500).json({
         success: false,
+        type: "find-user",
         message: "Internal Server Error",
         error
       });
     }
+  }
+
+  /**
+   * check email verification status
+   * @param {Request} req
+   * @param {Response} res
+   */
+  static async checkVerificationStatus(req: Request, res: Response) {
+    const { email } = req.query;
+
+    // Query command finds user by email
+    const queryParams: QueryCommandInput = {
+      TableName: "users",
+      KeyConditionExpression: "email = :email",
+      ExpressionAttributeValues: {
+        ":email": email,
+      },
+    };
+
+    try {
+      const existUser = await ddbDocClient.send(new QueryCommand(queryParams));
+
+      if (existUser.Items && existUser.Items.length > 0) {
+        const user = existUser.Items[0];
+
+        if (user.email_verified) {
+          res.status(200).json({
+            success: true,
+            isVerified: true,
+            message: "User email is verified."
+          });
+        } else {
+          res.status(200).json({
+            success: true,
+            isVerified: false,
+            message: "User email is not verified."
+          });
+        }
+      } else {
+        res.status(200).json({
+          success: false,
+          message: "Email is invalid.",
+        });
+      }
+    }
+    catch (error: any) {
+      // Return error rsponse from the server
+      res.status(500).json({
+        success: false,
+        type: "find-user",
+        message: "Internal Server Error",
+        error
+      });
+    }
+  }
+
+  /**
+   * confirm user email by code 
+   * @param {Request} req
+   * @param {Response} res
+   */
+  static async verifyEmail(req: Request, res: Response) {
+    const { email, code } = req.body;
+    const cognitoClient = new CognitoIdentityProvider({ region: process.env.REGION });
+
+    // cognito email confirmation params
+    const confirmEmailParams: ConfirmSignUpCommandInput = {
+      ClientId: process.env.COGNITO_CLIENT_ID,
+      Username: email,
+      ConfirmationCode: code
+    };
+
+    const updateParams: UpdateCommandInput = {
+      TableName: "users",
+      Key: { email },
+      UpdateExpression: "set email_verified = :verified",
+      ExpressionAttributeValues: {
+        ":verified": true
+      },
+      ReturnValues: "UPDATED_NEW"
+    };
+
+    cognitoClient.send(new ConfirmSignUpCommand(confirmEmailParams))
+      .then(async () => {
+        await ddbDocClient.send(new UpdateCommand(updateParams));
+
+        res.status(200).json({
+          success: true,
+          message: "Successfully confirmed!"
+        });
+      })
+      .catch((error: DynamoDBErrorType) => {
+        if (error.__type === DDBErrorType.INVALID_CODE) {
+          res.status(200).json({
+            success: false,
+            message: "Confirmation code is incorrect."
+          });
+        } else if (error.__type === DDBErrorType.EXPIRED_CODE) {
+          res.status(200).json({
+            success: false,
+            message: "Confirmation code is expired."
+          });
+        } else {
+          // Return error response from the server
+          res.status(500).json({
+            success: false,
+            type: "email-confirmation",
+            message: "Internal Server Error",
+            error
+          });
+        }
+      });
   }
 
   /**
