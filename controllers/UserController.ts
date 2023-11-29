@@ -6,8 +6,12 @@ import { v4 as uuidv4 } from "uuid";
 import { PutCommand, PutCommandInput, QueryCommand, QueryCommandInput, UpdateCommand, UpdateCommandInput } from "@aws-sdk/lib-dynamodb";
 import {
   CognitoIdentityProvider,
+  ConfirmForgotPasswordCommand,
+  ConfirmForgotPasswordCommandInput,
   ConfirmSignUpCommand,
   ConfirmSignUpCommandInput,
+  ForgotPasswordCommand,
+  ForgotPasswordCommandInput,
   SignUpCommand,
   SignUpCommandInput
 } from "@aws-sdk/client-cognito-identity-provider";
@@ -15,7 +19,10 @@ import {
 import { LoginUserInput, LoginUserSchema, RegisterUserInput, RegisterUserSchema } from "../validations/user.schema";
 import { ddbDocClient } from "../config/ddbDocClient";
 import { DynamoDBErrorType } from "../utils/types";
-import { DDBErrorType } from "../utils/enums";
+import { CognitoErrorType } from "../utils/enums";
+
+// shared variable
+const cognitoClient = new CognitoIdentityProvider({ region: process.env.REGION });
 
 export default class UserController {
   /**
@@ -26,7 +33,7 @@ export default class UserController {
   static async register(req: Request, res: Response) {
     const parsedData: RegisterUserInput = RegisterUserSchema.parse(req.body);
     // eslint-disable-next-line
-    const { confirm, creditNumber, expireMonth, expireYear, creditCode, creditZip, creditOwner, ...filteredInput } = parsedData;
+    const { confirm, ...filteredInput } = parsedData;
     const hashedPassword: string = await bcrypt.hash(filteredInput.password, 12);
 
     // Query command finds user by email
@@ -62,7 +69,6 @@ export default class UserController {
           // Create a new user if it doesn't exist
           const data = await ddbDocClient.send(new PutCommand(putParams));
 
-          const cognitoClient = new CognitoIdentityProvider({ region: process.env.REGION });
           const signupParams: SignUpCommandInput = {
             ClientId: process.env.COGNITO_CLIENT_ID,
             Username: filteredInput.email,
@@ -73,19 +79,30 @@ export default class UserController {
             ],
           };
 
+          // Sign up user to AWS Cognito
           await cognitoClient.send(new SignUpCommand(signupParams))
             .then(() => {
-              res.status(201).json({
-                success: true,
-                message: "Successfully registered!",
-                result: data,
+              const payload = {
+                firstName: filteredInput.firmName,
+                lastName: filteredInput.lastName,
+                email: filteredInput.email
+              };
+
+              // Generate a token by payload
+              jwt.sign(payload, process.env.JWT_SECRET_KEY!, { expiresIn: Number(process.env.JWT_EXPIRE_TIME) }, (err, token) => {
+                res.status(201).json({
+                  success: true,
+                  message: "Successfully registered!",
+                  token,
+                  result: data,
+                });
               });
             })
             .catch(error => {
               // Return error response from the server
               res.status(500).json({
                 success: false,
-                type: "user-registration",
+                type: "cognito: sign-up",
                 message: "Internal Server Error",
                 error
               });
@@ -96,7 +113,7 @@ export default class UserController {
         // Return error response from the server
         res.status(500).json({
           success: false,
-          type: "find-user",
+          type: "dynamodb: search-record",
           message: "Internal Server Error",
           error
         });
@@ -104,7 +121,7 @@ export default class UserController {
   }
 
   /**
-   * handle user login
+   * Handle user login
    * @param {Request} req 
    * @param {Response} res 
    */
@@ -136,18 +153,9 @@ export default class UserController {
           bcrypt.compare(parsedData.password, user.password)
             .then(async (isMatch: boolean) => {
               if (isMatch) {
-                console.log(user.email_verified);
-
-                if (!user.email_verified) {
-                  const cognitoClient = new CognitoIdentityProvider({ region: process.env.REGION });
-                  cognitoClient.resendConfirmationCode({
-                    ClientId: process.env.COGNITO_CLIENT_ID,
-                    Username: user.email
-                  });
-                }
-
                 const payload = {
-                  _id: user._id,
+                  firstName: user.firstName,
+                  lastName: user.lastName,
                   email: user.email
                 };
 
@@ -177,7 +185,7 @@ export default class UserController {
       // Return error response from the server
       res.status(500).json({
         success: false,
-        type: "find-user",
+        type: "dynamodb: search-record",
         message: "Internal Server Error",
         error
       });
@@ -185,7 +193,7 @@ export default class UserController {
   }
 
   /**
-   * check email verification status
+   * Check email verification status
    * @param {Request} req
    * @param {Response} res
    */
@@ -231,7 +239,7 @@ export default class UserController {
       // Return error rsponse from the server
       res.status(500).json({
         success: false,
-        type: "find-user",
+        type: "dynamodb: search-record",
         message: "Internal Server Error",
         error
       });
@@ -239,13 +247,12 @@ export default class UserController {
   }
 
   /**
-   * confirm user email by code 
+   * Confirm user email by code 
    * @param {Request} req
    * @param {Response} res
    */
   static async verifyEmail(req: Request, res: Response) {
     const { email, code } = req.body;
-    const cognitoClient = new CognitoIdentityProvider({ region: process.env.REGION });
 
     // cognito email confirmation params
     const confirmEmailParams: ConfirmSignUpCommandInput = {
@@ -270,16 +277,16 @@ export default class UserController {
 
         res.status(200).json({
           success: true,
-          message: "Successfully confirmed!"
+          message: "Verification successful!"
         });
       })
       .catch((error: DynamoDBErrorType) => {
-        if (error.__type === DDBErrorType.INVALID_CODE) {
+        if (error.__type === CognitoErrorType.INVALID_CODE) {
           res.status(200).json({
             success: false,
             message: "Confirmation code is incorrect."
           });
-        } else if (error.__type === DDBErrorType.EXPIRED_CODE) {
+        } else if (error.__type === CognitoErrorType.EXPIRED_CODE) {
           res.status(200).json({
             success: false,
             message: "Confirmation code is expired."
@@ -288,7 +295,121 @@ export default class UserController {
           // Return error response from the server
           res.status(500).json({
             success: false,
-            type: "email-confirmation",
+            type: "cognito: email-confirmation",
+            message: "Internal Server Error",
+            error
+          });
+        }
+      });
+  }
+
+  /**
+   * Resend confirmation code
+   * @param {Request} req
+   * @param {Response} res
+   */
+  static async resendCode(req: Request, res: Response) {
+    const { email } = req.body;
+    const params = {
+      ClientId: process.env.COGNITO_CLIENT_ID,
+      Username: email
+    };
+
+    cognitoClient.resendConfirmationCode(params)
+      .then(() => {
+        res.status(200).json({
+          success: true,
+          message: "Verification code resent."
+        });
+      })
+      .catch((error: CognitoErrorType) => {
+        // Return error response from the server
+        res.status(500).json({
+          success: false,
+          type: "cognito: resend-code",
+          message: "Internal Server Error",
+          error
+        });
+      });
+  }
+
+  /**
+   * Request password reset by email
+   * @param {Request} req
+   * @param {Response} res
+   */
+  static async forgotPassword(req: Request, res: Response) {
+    const { email } = req.body;
+
+    const forgotParams: ForgotPasswordCommandInput = {
+      ClientId: process.env.COGNITO_CLIENT_ID,
+      Username: email
+    };
+
+    await cognitoClient.send(new ForgotPasswordCommand(forgotParams))
+      .then(() => {
+        res.status(200).json({
+          success: true,
+          message: "The confirmation code was sent to your email."
+        });
+      })
+      .catch((error: DynamoDBErrorType) => {
+        // Return error response from the server
+        res.status(500).json({
+          success: false,
+          type: "cognito: forgot-password",
+          message: "Internal Server Error",
+          error
+        });
+      });
+  }
+
+  /**
+   * Reset password by email verification code
+   * @param {Request} req
+   * @param {Response} res
+   */
+  static async resetPassword(req: Request, res: Response) {
+    const { email, code, newPassword } = req.body;
+
+    const confirmParams: ConfirmForgotPasswordCommandInput = {
+      ClientId: process.env.COGNITO_CLIENT_ID,
+      Username: email,
+      ConfirmationCode: code,
+      Password: newPassword
+    };
+
+    await cognitoClient.send(new ConfirmForgotPasswordCommand(confirmParams))
+      .then(async () => {
+        const hashedPassword = await bcrypt.hash(newPassword, 12);
+        const updateParams: UpdateCommandInput = {
+          TableName: "users",
+          Key: { email },
+          UpdateExpression: "set password = :new_password",
+          ExpressionAttributeValues: {
+            ":new_password": hashedPassword
+          },
+          ReturnValues: "UPDATED_NEW"
+        };
+
+        await ddbDocClient.send(new UpdateCommand(updateParams));
+
+        res.status(200).json({
+          success: true,
+          message: "Password has been reset successfully!"
+        });
+      })
+      .catch((error: DynamoDBErrorType) => {
+        // Return error response from the server
+        if (error.__type === CognitoErrorType.INVALID_PASSWORD) {
+          res.status(400).json({
+            success: false,
+            message: "Password in invalid."
+          });
+        } else {
+          res.status(500).json({
+            success: false,
+            type: "cognito: reset-password",
             message: "Internal Server Error",
             error
           });
@@ -298,8 +419,8 @@ export default class UserController {
 
   /**
    * Decode JWT
-   * @param {Request} req 
-   * @param {Response} res 
+   * @param {Request} req
+   * @param {Response} res
    */
   static async accessToken(req: Request, res: Response) {
     res.status(200).json(_.omit(req.user, ["password"]));
