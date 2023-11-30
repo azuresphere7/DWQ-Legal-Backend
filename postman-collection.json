@@ -1,0 +1,493 @@
+{
+	"info": {
+		"_postman_id": "827b35e7-721a-47a5-8f79-b0b9de56d9a8",
+		"name": "DWQ",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "27021934"
+	},
+	"item": [
+		{
+			"name": "user",
+			"item": [
+				{
+					"name": "login",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "email",
+									"value": "patrick.dev.0417@proton.me",
+									"type": "text"
+								},
+								{
+									"key": "password",
+									"value": "Bluecomet2004@",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "localhost:8000/api/user/login",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"user",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "register",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "firstName",
+									"value": "Patrick",
+									"type": "text"
+								},
+								{
+									"key": "middleName",
+									"value": "",
+									"type": "text"
+								},
+								{
+									"key": "lastName",
+									"value": "Clifford",
+									"type": "text"
+								},
+								{
+									"key": "firmName",
+									"value": "Kon Ferry",
+									"type": "text"
+								},
+								{
+									"key": "firmDomain",
+									"value": "",
+									"type": "text"
+								},
+								{
+									"key": "email",
+									"value": "patrick.dev.0417@proton.me",
+									"type": "text"
+								},
+								{
+									"key": "barState",
+									"value": "Florida",
+									"type": "text"
+								},
+								{
+									"key": "barNumber",
+									"value": "17273000551",
+									"type": "text"
+								},
+								{
+									"key": "address1",
+									"value": "1860 NE Massachusetts Avenue Northeast 220",
+									"type": "text"
+								},
+								{
+									"key": "address2",
+									"value": "",
+									"type": "text"
+								},
+								{
+									"key": "city",
+									"value": "Saint Petersburg",
+									"type": "text"
+								},
+								{
+									"key": "state",
+									"value": "Florida",
+									"type": "text"
+								},
+								{
+									"key": "zip",
+									"value": "33729",
+									"type": "text"
+								},
+								{
+									"key": "creditNumber",
+									"value": "4111-1111-1111-1111",
+									"type": "text"
+								},
+								{
+									"key": "expireMonth",
+									"value": "1",
+									"type": "text"
+								},
+								{
+									"key": "expireYear",
+									"value": "2024",
+									"type": "text"
+								},
+								{
+									"key": "creditZip",
+									"value": "33303",
+									"type": "text"
+								},
+								{
+									"key": "creditCode",
+									"value": "367458",
+									"type": "text"
+								},
+								{
+									"key": "creditOwner",
+									"value": "Patrick Clifford",
+									"type": "text"
+								},
+								{
+									"key": "password",
+									"value": "Password1234@",
+									"type": "text"
+								},
+								{
+									"key": "confirm",
+									"value": "Password1234@",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "localhost:8000/api/user/register",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"user",
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "check status",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": []
+						},
+						"url": {
+							"raw": "localhost:8000/api/user/verify-email?email=patrick.dev.0417@proton.me",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"user",
+								"verify-email"
+							],
+							"query": [
+								{
+									"key": "email",
+									"value": "patrick.dev.0417@proton.me"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "verify email",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "email",
+									"value": "patrick.dev.0417@proton.me",
+									"type": "text"
+								},
+								{
+									"key": "code",
+									"value": "737795",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "localhost:8000/api/user/verify-email",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"user",
+								"verify-email"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "access token",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiIwZGYwZmI4My1hYzQyLTQ2MzQtODE2Yy1hOTMwODEyMGU1NzYiLCJlbWFpbCI6Im1tYXN0cmFuZ2VsbzExMjBAZ21haWwuY29tIiwiaWF0IjoxNzAwNDMyMjI0LCJleHAiOjE3MDA0MzU4MjR9.6Oh8BLobgRIc20hgj8MZ2bp0UulXl_qCo-gBACo6Jvw",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "localhost:8000/api/user/access-token",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"user",
+								"access-token"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "forgot password",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "email",
+									"value": "patrick.dev.0417@proton.me",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "localhost:8000/api/user/forgot-password",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"user",
+								"forgot-password"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "reset password",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "email",
+									"value": "patrick.dev.0417@proton.me",
+									"type": "text"
+								},
+								{
+									"key": "code",
+									"value": "402118",
+									"type": "text"
+								},
+								{
+									"key": "newPassword",
+									"value": "Bluecomet2004@",
+									"type": "text"
+								},
+								{
+									"key": "confirmPassword",
+									"value": "Bluecomet2004@",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "localhost:8000/api/user/reset-password",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"user",
+								"reset-password"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "resend code",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "email",
+									"value": "patick.dev.0417@proton.me",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "localhost:8000/api/user/resend-code",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"user",
+								"resend-code"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "jurisdiction",
+			"item": []
+		},
+		{
+			"name": "admin",
+			"item": [
+				{
+					"name": "user",
+					"item": [
+						{
+							"name": "get list",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "localhost:8000/api/admin/user?limit=3&page=3",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"admin",
+										"user"
+									],
+									"query": [
+										{
+											"key": "limit",
+											"value": "3"
+										},
+										{
+											"key": "page",
+											"value": "3"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "update info",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "urlencoded",
+									"urlencoded": [
+										{
+											"key": "email",
+											"value": "email7@gmail.com",
+											"type": "text"
+										},
+										{
+											"key": "firstName",
+											"value": "John",
+											"type": "text"
+										},
+										{
+											"key": "lastName",
+											"value": "Doe",
+											"type": "text"
+										}
+									]
+								},
+								"url": {
+									"raw": "localhost:8000/api/admin/user",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"admin",
+										"user"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "delete",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "localhost:8000/api/admin/user?email=email2@gmail.com",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"admin",
+										"user"
+									],
+									"query": [
+										{
+											"key": "email",
+											"value": "email2@gmail.com"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		}
+	]
+}

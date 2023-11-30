@@ -1,4 +1,4 @@
-export interface CognitoError {
+export interface DynamoDBError {
   name: string;
   $fault: string;
   $metadata: {
@@ -8,4 +8,5 @@ export interface CognitoError {
     totalRetryDelay: number;
   },
   __type: string;
+  message: string;
 }

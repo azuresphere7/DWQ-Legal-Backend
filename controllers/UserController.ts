@@ -18,7 +18,7 @@ import {
 
 import { LoginUserInput, LoginUserSchema, RegisterUserInput, RegisterUserSchema } from "../validations/user.schema";
 import { ddbDocClient } from "../config/ddbDocClient";
-import { CognitoError } from "../utils/types";
+import { DynamoDBError } from "../utils/types";
 import { CognitoErrorType } from "../utils/enums";
 
 // shared variable
@@ -53,6 +53,7 @@ export default class UserController {
         ...filteredInput,
         password: hashedPassword,
         email_verified: false,
+        isFree: "yes",
         createdAt: Date.now()
       }
     };
@@ -280,7 +281,7 @@ export default class UserController {
           message: "Verification successful!"
         });
       })
-      .catch((error: CognitoError) => {
+      .catch((error: DynamoDBError) => {
         if (error.__type === CognitoErrorType.INVALID_CODE) {
           res.status(200).json({
             success: false,
@@ -381,7 +382,7 @@ export default class UserController {
             });
           });
       })
-      .catch((error: CognitoError) => {
+      .catch((error: DynamoDBError) => {
         // Return error response from the server
         res.status(500).json({
           success: false,
@@ -427,7 +428,7 @@ export default class UserController {
           message: "Password has been reset successfully!"
         });
       })
-      .catch((error: CognitoError) => {
+      .catch((error: DynamoDBError) => {
         // Return error response from the server
         if (error.__type === CognitoErrorType.INVALID_PASSWORD) {
           res.status(400).json({
