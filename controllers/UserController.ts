@@ -18,7 +18,7 @@ import {
 
 import { LoginUserInput, LoginUserSchema, RegisterUserInput, RegisterUserSchema } from "../validations/user.schema";
 import { ddbDocClient } from "../config/ddbDocClient";
-import { DynamoDBErrorType } from "../utils/types";
+import { CognitoError } from "../utils/types";
 import { CognitoErrorType } from "../utils/enums";
 
 // shared variable
@@ -177,7 +177,7 @@ export default class UserController {
       } else {
         res.status(200).json({
           success: false,
-          message: "Email is invalid.",
+          message: "User email is invalid.",
         });
       }
     }
@@ -280,7 +280,7 @@ export default class UserController {
           message: "Verification successful!"
         });
       })
-      .catch((error: DynamoDBErrorType) => {
+      .catch((error: CognitoError) => {
         if (error.__type === CognitoErrorType.INVALID_CODE) {
           res.status(200).json({
             success: false,
@@ -347,13 +347,41 @@ export default class UserController {
     };
 
     await cognitoClient.send(new ForgotPasswordCommand(forgotParams))
-      .then(() => {
-        res.status(200).json({
-          success: true,
-          message: "The confirmation code was sent to your email."
-        });
+      .then(async () => {
+        // Query command finds user by email
+        const queryParams: QueryCommandInput = {
+          TableName: "users",
+          KeyConditionExpression: "email = :email",
+          ExpressionAttributeValues: {
+            ":email": email,
+          },
+        };
+
+        await ddbDocClient.send(new QueryCommand(queryParams))
+          .then(users => {
+            if (users.Items && users.Items.length > 0) {
+              res.status(200).json({
+                success: true,
+                message: "The confirmation code was sent to your email."
+              });
+            } else {
+              res.status(200).json({
+                success: false,
+                message: "Email does not exist."
+              });
+            }
+          })
+          .catch((error: any) => {
+            // Return error response from the server
+            res.status(500).json({
+              success: false,
+              type: "dynamodb: find-user",
+              message: "Internal Server Error",
+              error
+            });
+          });
       })
-      .catch((error: DynamoDBErrorType) => {
+      .catch((error: CognitoError) => {
         // Return error response from the server
         res.status(500).json({
           success: false,
@@ -399,12 +427,12 @@ export default class UserController {
           message: "Password has been reset successfully!"
         });
       })
-      .catch((error: DynamoDBErrorType) => {
+      .catch((error: CognitoError) => {
         // Return error response from the server
         if (error.__type === CognitoErrorType.INVALID_PASSWORD) {
           res.status(400).json({
             success: false,
-            message: "Password in invalid."
+            message: "Password is invalid."
           });
         } else {
           res.status(500).json({

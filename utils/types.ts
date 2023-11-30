@@ -1,4 +1,4 @@
-export interface DynamoDBErrorType {
+export interface CognitoError {
   name: string;
   $fault: string;
   $metadata: {

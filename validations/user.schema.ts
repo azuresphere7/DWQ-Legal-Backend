@@ -29,8 +29,7 @@ export const RegisterUserSchema = z
       .regex(/[a-z]/, "Must contain at least 1 lowercase")
       .regex(/[0-9]/, "Must contain at least 1 number")
       .regex(/[!@#$%^&*(),.?":{}|<>]/, "Must contain at least 1 special character"),
-    confirm: z.string().min(1, "Required"),
-    isFree: z.string(),
+    confirm: z.string().min(1, "Required")
   })
   .refine(data => data.password === data.confirm, {
     path: ["confirm"],
