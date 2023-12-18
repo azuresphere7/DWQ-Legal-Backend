@@ -12,13 +12,12 @@ jobs:
         uses: actions/checkout@v3
 
       - name: SSH and Deploy to EC2
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@main
         with:
           host: ${{ secrets.HOST }}
           username: "ubuntu"
-          key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            export NVM_DIR=~/.nvm
-            source ~/.nvm/nvm.sh
-            cd /var/www/flexion
-            sh build-script.sh
+            git pull
+            pnpm install
+            pnpm build
+            pnpm start
