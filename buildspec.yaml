@@ -18,3 +18,9 @@ phases:
     - echo "📦 Building Node.js backend..."
     - pnpm build
     - echo "✅ Build passed successfully!"
+artifacts:
+  files:
+  - '**/*'
+  base-directory: /
+  name: dwq-backend-artifact
+  discard-paths: no
