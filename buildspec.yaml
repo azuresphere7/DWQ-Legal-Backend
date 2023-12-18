@@ -5,22 +5,26 @@ phases:
     runtime-versions:
       nodejs: 18
     commands:
-    - echo "🥫 installing pnpm..."
+    - echo "🔑 Installing PNPM..."
     - npm i -g pnpm
-    - echo "📦 installing node modules..."
+    - echo "📦 Installing node modules..."
     - pnpm install
-    - echo "✅ Packages installed successfully!"
+    - echo "✔ Packages installed successfully!"
+  pre_build:
+    commands:
+    - echo "📐 Linting..."
+    - pnpm lint
+    - echo "✔ ESLint passed successfully!"
   build:
     commands:
-    - echo "⚙️ Testing..."
-    - pnpm lint
-    - echo "✅ Tests passed successfully."
-    - echo "📦 Building Node.js backend..."
+    - echo "🔨 Building Node.js backend..."
     - pnpm build
-    - echo "✅ Build passed successfully!"
+    - echo "✔ Build passed successfully!"
+  post_build:
+    commands:
+    - echo "🚚 Performing post-build packing and operations..."
+    - echo "✔ Post build successful!"
 artifacts:
   files:
-  - '**/*'
-  base-directory: /
-  name: dwq-backend-artifact
-  discard-paths: no
+  - "**/*"
+  name: dwq-backend-build-artifacts
