@@ -1,0 +1,20 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 18
+    commands:
+    - echo "🥫 installing pnpm..."
+    - npm i -g pnpm
+    - echo "📦 installing node modules..."
+    - pnpm install
+    - echo "✅ Packages installed successfully!"
+  build:
+    commands:
+    - echo "⚙️ Testing..."
+    - pnpm lint
+    - echo "✅ Tests passed successfully."
+    - echo "📦 Building Node.js backend..."
+    - pnpm build
+    - echo "✅ Build passed successfully!"
