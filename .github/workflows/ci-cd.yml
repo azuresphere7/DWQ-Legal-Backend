@@ -18,7 +18,8 @@ jobs:
           key: ${{ secrets.KEY_PAIR }}
           username: "ubuntu"
           script: |
-            source ~/.bashrc
+            export NVM_DIR=~/.nvm
+            source ~/.nvm/nvm.sh
             nvm install 18
             nvm use 18
             npm i -g pnpm
