@@ -18,6 +18,7 @@ jobs:
           key: ${{ secrets.KEY_PAIR }}
           username: "ubuntu"
           script: |
+            npm i -g pnpm
             cd DWQ-Backend
             git pull
             pnpm install
