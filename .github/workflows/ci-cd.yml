@@ -15,7 +15,7 @@ jobs:
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.HOST }}
-          key: ${{ secrets.KEY }}
+          key: ${{ secrets.KEY_PAIR }}
           username: "ubuntu"
           script: |
             git pull
