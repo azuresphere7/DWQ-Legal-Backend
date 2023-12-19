@@ -20,9 +20,6 @@ jobs:
           script: |
             export NVM_DIR=~/.nvm
             source ~/.nvm/nvm.sh
-            nvm install 18
-            nvm use 18
-            npm i -g pnpm
             cd DWQ-Backend
             git pull
             pnpm install
