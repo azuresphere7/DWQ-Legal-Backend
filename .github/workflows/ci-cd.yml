@@ -24,4 +24,4 @@ jobs:
             git pull
             pnpm install
             pnpm build
-            pnpm start
+            pm2 restart ./dist/index.js
