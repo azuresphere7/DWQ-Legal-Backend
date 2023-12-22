@@ -1,3 +1,7 @@
+import * as fs from "fs/promises";
+import { SendEmailCommand, SendEmailCommandInput } from "@aws-sdk/client-ses";
+import sesClient from "../config/sesClient";
+
 export function isValidPhoneNumber(input: string): boolean {
   // Remove non-digit characters from the phone number
   const phoneNumber = input.replace(/\D/g, "");
@@ -18,7 +22,7 @@ export function isValidCreditCardNumber(input: string): boolean {
   // Remove non-digit characters from the credit card number
   const cleanedNumber = input.replace(/\D/g, "");
 
-  // Check if the number is empty or doesn't contain only digits
+  // Check if the number is empty or doesn"t contain only digits
   if (!cleanedNumber || !/^\d+$/.test(cleanedNumber)) {
     return false;
   }
@@ -48,4 +52,62 @@ export function isValidCreditCardNumber(input: string): boolean {
 export function numberTo2Digit(value: number) {
   // Return all numbers with 2 digits
   return value < 10 ? `0${value}` : value;
+}
+
+// Calculate the end date after the specific date
+export function getEndDate(period: number) {
+  const currentDate: Date = new Date();
+
+  currentDate.setDate(currentDate.getDate() + period);
+
+  const options: Intl.DateTimeFormatOptions = {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true
+  };
+
+  return currentDate.toLocaleString("en-US", options);
+}
+
+export async function sendEmail(to: string, subject: string, content: any) {
+  if (!to || !subject || !content) {
+    throw new Error("Missing parameters! Make sure to include to, subject, and content.");
+  }
+
+  const emailTemplate = await fs.readFile("./templates/order-notification-to-defendant.html", "utf-8");
+  const htmlContent = emailTemplate.replace("${content}", content);
+
+  const emailParams: SendEmailCommandInput = {
+    Destination: {
+      ToAddresses: [to]
+    },
+    Message: {
+      Subject: {
+        Charset: "UTF-8",
+        Data: subject
+      },
+      Body: {
+        Html: {
+          Charset: "UTF-8",
+          Data: htmlContent
+        }
+      }
+    },
+    Source: `"DWQ Legal Alerts" <${ process.env.AWS_SES_SOURCE_EMAIL }>`
+  };
+
+  console.log(`>> Sending email to: ${to}`);
+
+  try {
+    const data = await sesClient.send(new SendEmailCommand(emailParams));
+    return data;
+  }
+  catch (error) {
+    console.error(`Failed to send email: ${error}`);
+    throw error; // Rethrow the error for the caller to handle
+  }
 }
