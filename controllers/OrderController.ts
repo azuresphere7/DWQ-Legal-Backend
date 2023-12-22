@@ -3,7 +3,7 @@ import * as bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
 import { PutCommand, PutCommandInput, QueryCommand, QueryCommandInput } from "@aws-sdk/lib-dynamodb";
 import { ddbDocClient } from "../config/ddbDocClient";
-import { getEndDate, sendEmail } from "../utils/functions";
+import { addNotification, getEndDate, sendEmail } from "../utils/functions";
 import { ResponseMessageType } from "../utils/enums";
 import { notificationTitle, notificationContent } from "../utils/config";
 import { CognitoIdentityProvider, SignUpCommand, SignUpCommandInput } from "@aws-sdk/client-cognito-identity-provider";
@@ -52,6 +52,7 @@ export default class OrderController {
             if (existRecord.Items && existRecord.Items.length > 0) {
               try {
                 await sendEmail(email, notificationTitle.plaintiff1, notificationContent.plaintiff1);
+                await addNotification(email, notificationTitle.plaintiff1, notificationContent.plaintiff1);
               } catch (error) {
                 // Return error response from the server
                 res.status(500).json({
@@ -84,14 +85,22 @@ export default class OrderController {
             if (existRecord.Items && existRecord.Items.length > 0 && parsedData.notify) {
               try {
                 await sendEmail(email, `${parsedData.email} ${notificationTitle.defendant1}`, notificationContent.defendant1);
-              } catch (error) {
+                await addNotification(email, `${parsedData.email} ${notificationTitle.defendant1}`, notificationContent.defendant1);
+              } catch (error: any) {
                 // Return error response from the server
-                res.status(500).json({
-                  success: false,
-                  type: "ses: send-notification",
-                  message: ResponseMessageType.SERVER_ERROR,
-                  error
-                });
+                if (error.name === "MessageRejected") {
+                  res.status(200).json({
+                    success: false,
+                    message: `Cannot send notifications to ${email}`
+                  });
+                } else {
+                  res.status(500).json({
+                    success: false,
+                    type: "ses: send-notification",
+                    message: ResponseMessageType.SERVER_ERROR,
+                    error
+                  });
+                }
               }
             } else {
               const hashedPassword: string = await bcrypt.hash(defaultPassword, 12);

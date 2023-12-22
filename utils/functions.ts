@@ -1,6 +1,9 @@
 import * as fs from "fs/promises";
+import { v4 as uuidv4 } from "uuid";
 import { SendEmailCommand, SendEmailCommandInput } from "@aws-sdk/client-ses";
 import sesClient from "../config/sesClient";
+import { PutCommand, PutCommandInput } from "@aws-sdk/lib-dynamodb";
+import { ddbDocClient } from "../config/ddbDocClient";
 
 export function isValidPhoneNumber(input: string): boolean {
   // Remove non-digit characters from the phone number
@@ -109,5 +112,27 @@ export async function sendEmail(to: string, subject: string, content: any) {
   catch (error) {
     console.error(`Failed to send email: ${error}`);
     throw error; // Rethrow the error for the caller to handle
+  }
+}
+
+export async function addNotification(email: string, title: string, content: string) {
+  const putQuery: PutCommandInput = {
+    TableName: "notification",
+    Item: {
+      _id: uuidv4(),
+      email,
+      title,
+      content,
+      isRead: false
+    }
+  };
+
+  try {
+    const result = await ddbDocClient.send(new PutCommand(putQuery));
+    return result;
+  }
+  catch (error: any) {
+    console.error(`Failed to add notification ${error}`);
+    throw error;
   }
 }
