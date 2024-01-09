@@ -24,7 +24,7 @@ app.use(passport.initialize());
 passport_verify(passport);
 
 // Routes
-api.get("/", (req: express.Request, res: express.Response) => res.send("The response from the server"));
+app.get("/", (req: express.Request, res: express.Response) => res.send("The response from the server"));
 app.use("/api", api);
 
 // Listen on port
