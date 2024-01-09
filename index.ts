@@ -1,5 +1,3 @@
-import * as https from "https";
-import * as fs from "fs";
 import * as dotenv from "dotenv";
 import * as express from "express";
 import * as bodyParser from "body-parser";
@@ -12,10 +10,6 @@ import api from "./routes";
 
 // Config
 dotenv.config();
-const credentials = {
-  key: fs.readFileSync("config/server.key"),
-  cert: fs.readFileSync("config/server.cert")
-};
 
 // Variables
 const app = express();
@@ -34,5 +28,4 @@ api.get("/", (req: express.Request, res: express.Response) => res.send("The resp
 app.use("/api", api);
 
 // Listen on port
-https.createServer(credentials, app).listen(443, () => console.log(">> HTTPS Server is running"));
 app.listen(port, () => console.log(`>> HTTP Server is running on port ${port}`));
