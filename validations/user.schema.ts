@@ -1,4 +1,3 @@
-import { isValidPhoneNumber } from "../utils/functions";
 import { z } from "zod";
 
 export const RegisterUserSchema = z
@@ -9,8 +8,6 @@ export const RegisterUserSchema = z
     firmName: z.string().min(1, "Required"),
     firmDomain: z.string(),
     email: z.string().min(1, "Required").email({ message: "Email format is invalid" }),
-    barState: z.string().min(1, "Required"),
-    barNumber: z.string().min(1, "Required").refine(isValidPhoneNumber, { message: "Invalid number" }),
     address1: z.string().min(1, "Required"),
     address2: z.string(),
     city: z.string().min(1, "Required"),

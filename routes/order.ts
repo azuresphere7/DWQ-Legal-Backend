@@ -4,6 +4,7 @@ import OrderController from "../controllers/OrderController";
 
 const router: express.Router = express.Router();
 
-router.post("/", passport.authenticate("jwt", { session: false }), OrderController.createOrder);
+router.get("/", OrderController.getList);
+router.post("/", passport.authenticate("jwt", { session: false }), OrderController.create);
 
 export default router;
