@@ -49,7 +49,7 @@ export default class UserController {
     const putParams: PutCommandInput = {
       TableName: "users",
       Item: {
-        _id: uuidv4(),
+        account_number: uuidv4(),
         ...filteredInput,
         password: hashedPassword,
         email_verified: false,

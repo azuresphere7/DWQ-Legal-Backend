@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import * as bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
-import { PutCommand, PutCommandInput, QueryCommand, QueryCommandInput } from "@aws-sdk/lib-dynamodb";
+import { PutCommand, PutCommandInput, QueryCommand, QueryCommandInput, ScanCommand, ScanCommandInput } from "@aws-sdk/lib-dynamodb";
 import { ddbDocClient } from "../config/ddbDocClient";
 import { addNotification, getEndDate, sendEmail } from "../utils/functions";
 import { ResponseMessageType } from "../utils/enums";
@@ -19,22 +19,22 @@ export default class OrderController {
    * @param {Request} req 
    * @param {Response} res 
    */
-  static async createOrder(req: Request, res: Response) {
+  static async create(req: Request, res: Response) {
     const parsedData: OrderInput = OrderSchema.parse(req.body);
 
     try {
-      const jurisdictionQuery: QueryCommandInput = {
-        TableName: "jurisdiction",
-        KeyConditionExpression: "jCode = :jCode",
+      const courtQuery: QueryCommandInput = {
+        TableName: "court",
+        KeyConditionExpression: "code = :code",
         ExpressionAttributeValues: {
-          ":jCode": parsedData.state
+          ":code": parsedData.state
         }
       };
 
-      const jRecord = await ddbDocClient.send(new QueryCommand(jurisdictionQuery));
+      const cRecord = await ddbDocClient.send(new QueryCommand(courtQuery));
 
-      if (jRecord.Items && jRecord.Items.length > 0) {
-        if (jRecord.Items[0].isActive) {
+      if (cRecord.Items && cRecord.Items.length > 0) {
+        if (cRecord.Items[0].isActive) {
           const { plaintiffs, defendants } = parsedData;
 
           const plaintiffEmailPromises = plaintiffs.map(async (email: string) => {
@@ -151,8 +151,8 @@ export default class OrderController {
               number: uuidv4(),
               ...parsedData,
               startedAt: new Date().toLocaleString("en-US", { timeZone: "America/New_York" }),
-              nopEndAt: getEndDate(jRecord.Items[0].nopPeriod),
-              opEndAt: getEndDate(jRecord.Items[0].opPeriod),
+              nopEndAt: getEndDate(cRecord.Items[0].nopPeriod),
+              opEndAt: getEndDate(cRecord.Items[0].opPeriod),
               updatedAt: new Date().toLocaleString("en-US", { timeZone: "America/New_York" })
             }
           };
@@ -178,23 +178,86 @@ export default class OrderController {
         } else {
           res.status(200).json({
             success: false,
-            message: `Jurisdiction - ${jRecord.Items[0].jCode} is not available now.`
+            message: `Court - ${cRecord.Items[0].code} is not available now.`
           });
         }
       } else {
         res.status(200).json({
           success: false,
-          message: `Cannot find the jurisdiction record for ${parsedData.state}.`
+          message: `Cannot find the court record for ${parsedData.state}.`
         });
       }
     } catch (error) {
       // Return error response from the server
       res.status(500).json({
         success: false,
-        type: "dynamodb: verify-jurisdiction",
+        type: "dynamodb: verify-court",
         message: ResponseMessageType.SERVER_ERROR,
         error
       });
     }
+  }
+
+  /**
+   * Get order list
+   * @param {Request} req
+   * @param {Response} res
+   */
+  static async getList(req: Request, res: Response) {
+    const { limit, page } = req.query;
+
+    let lastEvaluatedKey = undefined;
+    let currentPage: number = 0;
+    const pageSize = limit ? Number(limit) : 5;
+
+    const allRecords = await ddbDocClient.send(new ScanCommand({ TableName: "order", Select: "COUNT" }));
+
+    while (currentPage < Number(page) - 1) {
+      const scanParams: ScanCommandInput = {
+        TableName: "order",
+        Limit: pageSize,
+        ExclusiveStartKey: lastEvaluatedKey,
+      };
+
+      try {
+        const result = await ddbDocClient.send(new ScanCommand(scanParams));
+        lastEvaluatedKey = result.LastEvaluatedKey;
+
+        if (!lastEvaluatedKey) break;
+
+        currentPage++;
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          type: "dynamodb: get-order-list",
+          error,
+        });
+      }
+    }
+
+    const finalScanParams: ScanCommandInput = {
+      TableName: "order",
+      Limit: pageSize,
+      ExclusiveStartKey: lastEvaluatedKey,
+    };
+
+    ddbDocClient.send(new ScanCommand(finalScanParams))
+      .then(orders => {
+        res.status(200).json({
+          success: true,
+          total: allRecords.Count,
+          limit: pageSize,
+          page,
+          list: orders.Items,
+          lastEvaluatedKey: orders.LastEvaluatedKey
+        });
+      })
+      .catch(error => {
+        res.status(500).json({
+          success: false,
+          type: "dynamodb: get-order-list",
+          error
+        });
+      });
   }
 }
