@@ -199,7 +199,7 @@ export default class OrderController {
   }
 
   /**
-   * Get order list
+   * Fetch order list
    * @param {Request} req
    * @param {Response} res
    */
